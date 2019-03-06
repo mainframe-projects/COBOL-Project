@@ -7,26 +7,40 @@
       ******************************************************************
        IDENTIFICATION DIVISION.
       *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-       PROGRAM-ID. PARTS_ADD.
+       PROGRAM-ID. PARTS_ADD INITIAL.
        ENVIRONMENT DIVISION.
       *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
        CONFIGURATION SECTION.
       *-----------------------
        INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+               SELECT FIN ASSIGN TO DISK
+               ORGANIZATION IS INDEXED
+               ACCESS IS RANDOM
+               RECORD KEY IS PARTID.
       *-----------------------
        DATA DIVISION.
       *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
        FILE SECTION.
+       FD FIN
+           VALUE OF FILE-ID IS "../PARTLIST.DAT".
+           01 REC-IO.
+               05 PARTID       PIC 99.
+               05 PARTNAME     PIC X(15).
+               05 PARTDESC     PIC X(35).
+               05 PARTPRICE    PIC $ZZ9.99.
+               05 PARTSUPP     PIC 9(5).
+
       *-----------------------
        WORKING-STORAGE SECTION.
-       01 WS-ERROR-MESSAGE     PIC X(40).
+       01 WS-ERROR-MESSAGE     PIC X(40) VALUE SPACES.
        01 WS-DATA-VALIDATED    PIC X VALUE "F".
        01 PART-OBJECT.
-           05 WS-PART-ID       PIC 9(5).
-           05 WS-PART-NAME     PIC X(15).
-           05 WS-PART-DESC     PIC X(35).
-           05 WS-PART-PRICE    PIC 999V99.
-           05 WS-PART-SUPP     PIC 9(5).
+           05 WS-PART-ID       PIC 9(5) VALUE 00000.
+           05 WS-PART-NAME     PIC X(15) VALUE SPACES.
+           05 WS-PART-DESC     PIC X(35) VALUE SPACES.
+           05 WS-PART-PRICE    PIC 999V99 VALUE 00000.
+           05 WS-PART-SUPP     PIC 9(5) VALUE 00000.
        SCREEN SECTION.
        01 PART-ADD-SCREEN.
            05 TITLE-SECTION.
@@ -40,8 +54,8 @@
                    20 VALUE "Part ID: "                   LINE 5 COL 25.
                    20 PART-ID PIC 9(5) FROM WS-PART-ID    LINE 5 COL 34.
                10 PART-SUPP-FIELD.
-                   20 VALUE "Supplier ID: "              LINE 7 COL 21.
-                   20 PART-SUPP PIC 9(5) TO WS-PART-SUPP LINE 7 COL 34.
+                   20 VALUE "Supplier ID: "               LINE 7 COL 21.
+                   20 PART-SUPP PIC 9(5)  TO WS-PART-SUPP LINE 7 COL 34.
                10 PART-NAME-FIELD.
                    20 VALUE "Part Name: "                 LINE 9 COL 23.
                    20 PART-NAME PIC X(15) TO WS-PART-NAME LINE 9 COL 34.
@@ -65,15 +79,23 @@
       **
       * The main procedure of the program
       **
-      * TEMPORARY - SET DEFAULT VALUE OF NEXT ID
-            MOVE 12345 TO WS-PART-ID.
+            OPEN I-O FIN.
+
+            PERFORM GET-NEXT-PART-ID.
             DISPLAY PART-ADD-SCREEN.
             PERFORM UNTIL WS-DATA-VALIDATED = "T"
                ACCEPT PART-ADD-SCREEN
                PERFORM VALIDATE-DATA
             END-PERFORM.
-            STOP RUN.
+            PERFORM FINALIZE-PART-ADD.
 
+            CLOSE FIN.
+            GOBACK.
+      ****** UNIMPLEMENTED - NEEDS TO RETURN FIRST AVAILABLE ID
+       GET-NEXT-PART-ID.
+           MOVE 12345 TO WS-PART-ID.
+
+      * Validate that the data received is okay
        VALIDATE-DATA.
            MOVE SPACES TO WS-ERROR-MESSAGE.
            IF WS-PART-PRICE <= 0 or > 999.99 THEN
@@ -89,12 +111,20 @@
            IF WS-PART-SUPP <= 0 OR WS-PART-SUPP > 99999 THEN
                MOVE "INVALID PART SUPPLIER" TO WS-ERROR-MESSAGE
            END-IF.
-      ****** This needs to also check if the part ID already exists
-           IF WS-PART-ID <= 0 OR WS-PART-ID > 99999 THEN
-               MOVE "INVALID PART-ID" TO WS-ERROR-MESSAGE
-           END-IF.
            IF WS-ERROR-MESSAGE = SPACES THEN
                MOVE "T" TO WS-DATA-VALIDATED
            END-IF.
+
+      ****** This will commit the part to memory
+       FINALIZE-PART-ADD.
+           MOVE WS-PART-ID TO PARTID.
+           MOVE WS-PART-NAME TO PARTNAME.
+           MOVE WS-PART-DESC TO PARTDESC.
+           MOVE WS-PART-PRICE TO PARTPRICE.
+           MOVE WS-PART-SUPP TO PARTSUPP.
+           WRITE REC-IO
+               INVALID KEY
+                   MOVE "ERROR INSERTING FILE" TO WS-ERROR-MESSAGE
+           END-WRITE.
 
        END PROGRAM PARTS_ADD.
