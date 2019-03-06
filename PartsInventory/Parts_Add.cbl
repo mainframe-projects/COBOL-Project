@@ -76,17 +76,22 @@
 
        VALIDATE-DATA.
            MOVE SPACES TO WS-ERROR-MESSAGE.
-           IF WS-PART-ID <= 0 OR WS-PART-ID > 99999 THEN
-               MOVE "INVALID PART-ID" TO WS-ERROR-MESSAGE
-           END-IF.
-           IF WS-PART-NAME = SPACES THEN
-               MOVE "INVALID PART-NAME" TO WS-ERROR-MESSAGE
+           IF WS-PART-PRICE <= 0 or > 999.99 THEN
+               MOVE "INVALID PART PRICE" TO WS-ERROR-MESSAGE
            END-IF.
            IF WS-PART-DESC = SPACES THEN
                MOVE "INVALID PART DESCRIPTION" TO WS-ERROR-MESSAGE
            END-IF.
+           IF WS-PART-NAME = SPACES THEN
+               MOVE "INVALID PART-NAME" TO WS-ERROR-MESSAGE
+           END-IF.
+      ****** This needs to check if the supplier exists (it must)
            IF WS-PART-SUPP <= 0 OR WS-PART-SUPP > 99999 THEN
                MOVE "INVALID PART SUPPLIER" TO WS-ERROR-MESSAGE
+           END-IF.
+      ****** This needs to also check if the part ID already exists
+           IF WS-PART-ID <= 0 OR WS-PART-ID > 99999 THEN
+               MOVE "INVALID PART-ID" TO WS-ERROR-MESSAGE
            END-IF.
            IF WS-ERROR-MESSAGE = SPACES THEN
                MOVE "T" TO WS-DATA-VALIDATED
